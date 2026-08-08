@@ -66,6 +66,10 @@ def parse_manifest_from_page(html: str):
 def write_stub(year: int, month: int, url: str, page_texts: list[str]):
     label = f"{MONTH_NAMES[month]} {year}"
     date_str = f"{year:04d}-{month:02d}-01"
+    pages_html = "\n".join(
+        f'<h2 id="page-{i}">Page {i}</h2>\n<pre>{escape(text)}</pre>'
+        for i, text in enumerate(page_texts, start=1)
+    )
     full_text = "\n\n".join(page_texts)
     ISSUES_DIR.mkdir(parents=True, exist_ok=True)
     html = f"""<!doctype html>
@@ -80,7 +84,7 @@ def write_stub(year: int, month: int, url: str, page_texts: list[str]):
 <h1 data-pagefind-meta="title">{escape(label)}</h1>
 <a data-pagefind-meta="pdf[href]" href="{escape(url)}" data-pagefind-ignore style="display:none">PDF</a>
 <span data-pagefind-meta="date" data-pagefind-sort="date" data-pagefind-ignore style="display:none">{date_str}</span>
-<pre>{escape(full_text)}</pre>
+{pages_html}
 </main>
 </body>
 </html>

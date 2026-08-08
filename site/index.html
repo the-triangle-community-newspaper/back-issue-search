@@ -21,7 +21,7 @@
   }
   p.sub {
     color: #555;
-    margin-top: 0;
+    margin-top: 0.85rem;
     margin-bottom: 1.5rem;
     font-size: 0.95rem;
   }
@@ -144,17 +144,28 @@
     for (const item of items) {
       const li = document.createElement("li");
 
+      // Each issue is indexed with one <h2 id="page-N"> per PDF page, so
+      // Pagefind's sub-results tell us which page(s) actually matched. Use
+      // the first matching page for both the label and the excerpt shown,
+      // so they always describe the same spot in the issue.
+      const pageMatch = item.sub_results?.find(
+        (sr) => sr.anchor && /^page-\d+$/.test(sr.anchor.id)
+      );
+      const pageNum = pageMatch ? pageMatch.anchor.id.replace("page-", "") : null;
+
       const a = document.createElement("a");
       a.href = item.meta.pdf;
-      a.textContent = item.meta.title || item.url;
+      const title = item.meta.title || item.url;
+      a.textContent = pageNum ? `${title}, p${pageNum}` : title;
       a.target = "_blank";
       a.rel = "noopener";
       li.appendChild(a);
 
-      if (item.excerpt) {
+      const excerptHtml = (pageMatch && pageMatch.excerpt) || item.excerpt;
+      if (excerptHtml) {
         const span = document.createElement("span");
         span.className = "excerpt";
-        span.innerHTML = item.excerpt;
+        span.innerHTML = excerptHtml;
         li.appendChild(span);
       }
 

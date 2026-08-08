@@ -16,7 +16,11 @@ import sys
 from pathlib import Path
 from html import escape
 
+import os
+
 import fitz  # pymupdf
+
+FORCE = os.environ.get("FORCE_REPROCESS") == "1"
 
 ROOT = Path(__file__).resolve().parent.parent
 SITE_DIR = ROOT / "site"
@@ -95,7 +99,7 @@ def process_pdf(path, lookup, unmatched):
         return False
 
     stub_path = ISSUES_DIR / f"{year:04d}-{month:02d}.html"
-    if stub_path.exists():
+    if stub_path.exists() and not FORCE:
         print(f"  already indexed: {MONTH_NAMES[month]} {year} ({path.name})")
         return True
 
@@ -120,7 +124,10 @@ def process_pdf(path, lookup, unmatched):
         print(f"  FAILED to read {path.name}: {e}")
         return False
 
-    full_text = "\n\n".join(page_texts)
+    pages_html = "\n".join(
+        f'<h2 id="page-{i}">Page {i}</h2>\n<pre>{escape(text)}</pre>'
+        for i, text in enumerate(page_texts, start=1)
+    )
     ISSUES_DIR.mkdir(parents=True, exist_ok=True)
     html = f"""<!doctype html>
 <html lang="en">
@@ -134,11 +141,12 @@ def process_pdf(path, lookup, unmatched):
 <h1 data-pagefind-meta="title">{escape(label)}</h1>
 <a data-pagefind-meta="pdf[href]" href="{escape(url)}" data-pagefind-ignore style="display:none">PDF</a>
 <span data-pagefind-meta="date" data-pagefind-sort="date" data-pagefind-ignore style="display:none">{date_str}</span>
-<pre>{escape(full_text)}</pre>
+{pages_html}
 </main>
 </body>
 </html>
 """
+    full_text = "\n\n".join(page_texts)
     stub_path.write_text(html, encoding="utf-8")
     print(f"  indexed {label} ({len(page_texts)} pages, {len(full_text)} chars) -> {path.name}")
     return True
