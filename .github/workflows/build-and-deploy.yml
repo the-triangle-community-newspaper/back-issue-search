@@ -2,14 +2,21 @@ name: Build and deploy Triangle search index
 
 on:
   workflow_dispatch: {}
+  schedule:
+    # 20:00 UTC on the 1st of every month except January -- lands as ~6-7am
+    # on the 2nd in Sydney year-round (the day after the publisher's usual
+    # 1st-of-the-month publish date). Skips January since no issue is
+    # published that month.
+    - cron: "0 20 1 2-12 *"
   push:
     branches: [main]
     paths:
       - "site/**"
       - ".github/workflows/build-and-deploy.yml"
+      - "scripts/**"
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -23,6 +30,25 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python dependencies
+        run: pip install -r scripts/requirements.txt
+
+      - name: Fetch any newly published issue
+        run: python scripts/fetch_new_issues.py
+
+      - name: Commit newly indexed issue(s)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add site/issues scripts/issues_manifest.json
+          git diff --cached --quiet || git commit -m "Index newly published issue(s) [skip ci]"
+          git push || true
 
       - name: Set up Node
         uses: actions/setup-node@v4

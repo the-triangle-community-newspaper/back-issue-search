@@ -9,14 +9,21 @@ hosted entirely on GitHub Pages.
 ## How it works
 
 - The PDFs themselves stay on thetriangle.org.au — nothing is copied or
-  re-hosted here, and nothing is ever downloaded from the live site by this
-  project.
-- When a new issue is published, the publisher uploads the PDF here (see
-  "Adding a new issue" below). `scripts/process_batch.py` extracts its full
-  text and writes a small stub HTML page per issue into `site/issues/`,
-  linking it to its live URL on thetriangle.org.au (looked up from
-  `scripts/issues_manifest.json`). The PDF itself is never committed to the
-  repo — only the extracted text stub.
+  re-hosted here.
+- `scripts/fetch_new_issues.py` reads the public
+  [Back Issues](https://thetriangle.org.au/back-issues/) listing page (just
+  that HTML page, not any PDFs), refreshes `scripts/issues_manifest.json`
+  with the current set of issues and their live URLs, and compares it
+  against what's already indexed in `site/issues/`. For any issue that's
+  new, it downloads only that PDF, extracts its full text, writes a small
+  stub HTML page, and immediately discards the PDF — nothing is ever stored
+  in this repo except the extracted text. Already-indexed issues are never
+  re-downloaded.
+- A GitHub Actions workflow (`.github/workflows/build-and-deploy.yml`) runs
+  this automatically at 20:00 UTC on the 1st of every month except January
+  (≈6-7am on the 2nd in Sydney, year-round), commits any newly indexed
+  issue, then rebuilds the Pagefind search index and redeploys the Pages
+  site. It can also be triggered manually any time from the Actions tab.
 - [Pagefind](https://pagefind.app/) indexes those stub pages into a compact,
   low-bandwidth search index (`site/pagefind/`) that runs entirely in the
   visitor's browser — no server, no hosting cost beyond GitHub Pages.
@@ -24,11 +31,6 @@ hosted entirely on GitHub Pages.
   or advanced options. Pressing Enter searches, and results are shown newest
   issue first, each linking straight to the original PDF on
   thetriangle.org.au.
-- A GitHub Actions workflow (`.github/workflows/build-and-deploy.yml`)
-  rebuilds the Pagefind index and redeploys the Pages site automatically on
-  every push to `site/`. It does not fetch anything from thetriangle.org.au —
-  it only rebuilds the search index from whatever stub pages are already
-  committed.
 
 ## One-time setup after this repo is created
 
@@ -42,23 +44,21 @@ hosted entirely on GitHub Pages.
 
 ## Adding a new issue
 
-Each month (except January), once a new issue is published on
-thetriangle.org.au:
+Normally nothing needs to be done — the monthly scheduled workflow picks up
+any newly published issue automatically a day after it goes up.
 
-1. Confirm the new issue's URL is listed on the
-   [Back Issues](https://thetriangle.org.au/back-issues/) page, and add an
-   entry for it to `scripts/issues_manifest.json` (year, month, url) if it
-   isn't already there.
-2. Put the issue's PDF in a folder locally and run:
-   ```bash
-   pip install -r scripts/requirements.txt
-   python scripts/process_batch.py /path/to/folder-with-the-pdf
-   ```
-   This extracts the text and writes `site/issues/YYYY-MM.html` — it never
-   uploads or transmits the PDF anywhere.
-3. Commit and push the new/updated files in `site/issues/` and
-   `scripts/issues_manifest.json`. The GitHub Actions workflow rebuilds the
-   search index and redeploys automatically.
+If you ever want to index an issue immediately rather than waiting for the
+schedule, either:
+
+- Run the **Build and deploy Triangle search index** workflow manually from
+  the Actions tab (it checks the back-issues page and indexes anything new
+  it finds), or
+- Process a local PDF directly:
+  ```bash
+  pip install -r scripts/requirements.txt
+  python scripts/process_batch.py /path/to/folder-with-the-pdf
+  ```
+  then commit and push the resulting files in `site/issues/`.
 
 ## Embedding on the WordPress site
 
