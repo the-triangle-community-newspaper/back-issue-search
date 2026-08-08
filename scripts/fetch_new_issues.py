@@ -76,10 +76,10 @@ def write_stub(year: int, month: int, url: str, page_texts: list[str]):
 </head>
 <body>
 <main data-pagefind-body
-      data-pagefind-meta="title:{escape(label)}, pdf:{escape(url)}, date:{date_str}"
       data-pagefind-filter="year:{year}">
-<h1>{escape(label)}</h1>
-<span data-pagefind-sort="date" data-pagefind-ignore style="display:none">{date_str}</span>
+<h1 data-pagefind-meta="title">{escape(label)}</h1>
+<a data-pagefind-meta="pdf[href]" href="{escape(url)}" data-pagefind-ignore style="display:none">PDF</a>
+<span data-pagefind-meta="date" data-pagefind-sort="date" data-pagefind-ignore style="display:none">{date_str}</span>
 <pre>{escape(full_text)}</pre>
 </main>
 </body>
