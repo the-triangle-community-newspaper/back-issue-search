@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Search The Triangle back issues</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    max-width: 640px;
+    margin: 3rem auto;
+    padding: 0 1.25rem;
+    color: #1a1a1a;
+    background: #fdfdfb;
+  }
+  h1 {
+    font-size: 1.4rem;
+    margin-bottom: 0.25rem;
+  }
+  p.sub {
+    color: #555;
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    font-size: 0.95rem;
+  }
+  form {
+    display: flex;
+    gap: 0.5rem;
+  }
+  input[type="search"] {
+    flex: 1;
+    font-size: 1rem;
+    padding: 0.65rem 0.9rem;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+  }
+  input[type="search"]:focus {
+    outline: 2px solid #2b6cb0;
+    outline-offset: 1px;
+  }
+  button {
+    font-size: 1rem;
+    padding: 0.65rem 1.1rem;
+    border: none;
+    border-radius: 8px;
+    background: #2b6cb0;
+    color: #fff;
+    cursor: pointer;
+  }
+  button:hover { background: #235a94; }
+  #status {
+    margin-top: 0.9rem;
+    font-size: 0.9rem;
+    color: #555;
+    min-height: 1.2em;
+  }
+  ul#results {
+    list-style: none;
+    padding: 0;
+    margin: 1rem 0 0 0;
+  }
+  ul#results li {
+    border-bottom: 1px solid #eee;
+    padding: 0.7rem 0;
+  }
+  ul#results a {
+    font-size: 1.02rem;
+    text-decoration: none;
+    color: #1a4d8f;
+    font-weight: 600;
+  }
+  ul#results a:hover { text-decoration: underline; }
+  ul#results .excerpt {
+    display: block;
+    color: #555;
+    font-size: 0.88rem;
+    margin-top: 0.2rem;
+  }
+  ul#results .excerpt mark {
+    background: #fff3b0;
+  }
+  footer {
+    margin-top: 2.5rem;
+    font-size: 0.8rem;
+    color: #888;
+  }
+</style>
+</head>
+<body>
+
+<h1>Search The Triangle back issues</h1>
+<p class="sub">Search the full text of every issue since 2007. Results are listed newest first, and each links straight to the original PDF on thetriangle.org.au.</p>
+
+<form id="search-form" role="search" autocomplete="off">
+  <input type="search" id="search-input" name="q" placeholder="Search for a name, topic, or event…" aria-label="Search The Triangle back issues" autofocus>
+  <button type="submit">Search</button>
+</form>
+
+<div id="status"></div>
+<ul id="results"></ul>
+
+<footer>Full-text search index rebuilt automatically each month.</footer>
+
+<script type="module">
+  const statusEl = document.getElementById("status");
+  const resultsEl = document.getElementById("results");
+  const form = document.getElementById("search-form");
+  const input = document.getElementById("search-input");
+
+  let pagefind;
+  async function getPagefind() {
+    if (!pagefind) {
+      pagefind = await import("./pagefind/pagefind.js");
+      await pagefind.init();
+    }
+    return pagefind;
+  }
+  // Warm up the index in the background so the first search feels instant.
+  getPagefind().catch((e) => console.error("Pagefind failed to load", e));
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const query = input.value.trim();
+    resultsEl.innerHTML = "";
+    if (!query) {
+      statusEl.textContent = "";
+      return;
+    }
+    statusEl.textContent = "Searching…";
+
+    const pf = await getPagefind();
+    const search = await pf.search(query, { sort: { date: "desc" } });
+
+    if (!search.results.length) {
+      statusEl.textContent = `No issues found for "${query}".`;
+      return;
+    }
+
+    const items = await Promise.all(search.results.map((r) => r.data()));
+    statusEl.textContent = `${items.length} issue${items.length === 1 ? "" : "s"} found for "${query}":`;
+
+    for (const item of items) {
+      const li = document.createElement("li");
+
+      const a = document.createElement("a");
+      a.href = item.meta.pdf;
+      a.textContent = item.meta.title || item.url;
+      a.target = "_blank";
+      a.rel = "noopener";
+      li.appendChild(a);
+
+      if (item.excerpt) {
+        const span = document.createElement("span");
+        span.className = "excerpt";
+        span.innerHTML = item.excerpt;
+        li.appendChild(span);
+      }
+
+      resultsEl.appendChild(li);
+    }
+  });
+</script>
+
+</body>
+</html>
