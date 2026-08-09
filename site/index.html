@@ -131,7 +131,32 @@
     statusEl.textContent = "Searching…";
 
     const pf = await getPagefind();
-    const search = await pf.search(query, { sort: { date: "desc" } });
+
+    // For multi-word searches, try an exact phrase match first -- this is
+    // what most people expect when searching a name or specific phrase
+    // (e.g. "Cobargo Hotel"). Without this, a plain multi-word search still
+    // requires every word to appear somewhere on the page, but not
+    // necessarily next to each other or in that order, which can bury the
+    // result someone is actually looking for under less relevant matches.
+    // If someone already typed their own quotes, respect that as-is and
+    // don't wrap it again. If the phrase search comes back empty, fall back
+    // to the normal (every word required, any order) search automatically.
+    const alreadyQuoted = /^".*"$/.test(query);
+    const wordCount = query.split(/\s+/).filter(Boolean).length;
+    let search;
+    let phraseMode = alreadyQuoted;
+
+    if (!alreadyQuoted && wordCount > 1) {
+      const phraseSearch = await pf.search(`"${query}"`, { sort: { date: "desc" } });
+      if (phraseSearch.results.length) {
+        search = phraseSearch;
+        phraseMode = true;
+      }
+    }
+
+    if (!search) {
+      search = await pf.search(query, { sort: { date: "desc" } });
+    }
 
     if (!search.results.length) {
       statusEl.textContent = `No issues found for "${query}".`;
@@ -139,7 +164,8 @@
     }
 
     const items = await Promise.all(search.results.map((r) => r.data()));
-    statusEl.textContent = `${items.length} issue${items.length === 1 ? "" : "s"} found for "${query}":`;
+    const modeNote = phraseMode ? " (exact phrase)" : "";
+    statusEl.textContent = `${items.length} issue${items.length === 1 ? "" : "s"} found for "${query}"${modeNote}:`;
 
     for (const item of items) {
       const li = document.createElement("li");

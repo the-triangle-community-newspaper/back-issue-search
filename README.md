@@ -30,7 +30,15 @@ hosted entirely on GitHub Pages.
 - `site/index.html` is the search page itself: a single text box, no filters
   or advanced options. Pressing Enter searches, and results are shown newest
   issue first, each linking straight to the original PDF on
-  thetriangle.org.au.
+  thetriangle.org.au. Each result also shows the page number the match was
+  found on (e.g. "December 2019, p3").
+- For a multi-word search (e.g. a person's name), the page automatically
+  tries an exact-phrase match first, falling back to a normal search
+  (every word required, in any order) only if the exact phrase isn't found
+  anywhere. Searching for `Cobargo Hotel` will therefore prioritise pages
+  where those two words actually appear together over pages that merely
+  mention both words separately. Typing your own quotes (`"Cobargo
+  Hotel"`) works the same way and is never double-wrapped.
 
 ## One-time setup after this repo is created
 
